@@ -13,10 +13,6 @@ jobs:
       - name: Download project
         uses: actions/checkout@v4
 
-      - name: Extract project ZIP
-        run: |
-          unzip -q AutoFishOpen_mobile_build.zip -d source
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -28,14 +24,22 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Configure Android SDK
+        run: |
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0"
 
-      - name: Install Android SDK
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Extract project
+        run: |
+          unzip -q AutoFishOpen_mobile_build.zip -d source
 
       - name: Build APK
-        run: gradle -p source :app:assembleDebug --no-daemon
+        run: |
+          gradle -p source :app:assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
