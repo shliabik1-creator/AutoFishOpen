@@ -1,16 +1,20 @@
 name: Build AutoFish Open APK
 
 on:
-  workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download project
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Java
@@ -20,22 +24,26 @@ jobs:
           java-version: '17'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.13'
 
-      - name: Configure Android SDK
-        run: |
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager --install \
-            "platform-tools" \
-            "platforms;android-36" \
-            "build-tools;36.0.0"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: true
+          packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
 
       - name: Extract project
         run: |
           unzip -q AutoFishOpen_mobile_build.zip -d source
+
+      - name: Check project files
+        run: |
+          echo "Checking Android project..."
+          ls -la source
+          test -f source/settings.gradle || test -f source/settings.gradle.kts
+          test -d source/app
 
       - name: Build APK
         run: |
@@ -45,4 +53,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AutoFishOpen-APK
-          path: source/app/build/outputs/apk/debug/app-debug.apk
+          path: source/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
